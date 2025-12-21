@@ -3,8 +3,9 @@ local M={}
 
 ---@class ONNVConfigure.Config
 ---@field installation_path string
+---@field installmodules string[]
 local config={}
-config.installation_path={};
+config.installmodules={"nix","LSP"};
 
 local M = utils.newconfig(config) --[[@as ONNVConfigure.Config]]
 
