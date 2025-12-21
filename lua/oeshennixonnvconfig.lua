@@ -11,8 +11,7 @@ function M.setup(configuration)
     Config(configuration);
   end
   assert(Config.installation_path,"oeshennixonnvconfig installation path not set");
-
-  nvimonnvconfig.installModules("nix","LSP");
+  nvimonnvconfig.installModules(Config.installmodules);
 end
 
 return M;
