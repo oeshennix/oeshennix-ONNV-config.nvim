@@ -19,12 +19,13 @@ local function setup(baseconfig,config)
 end
 
 
-function M.run(baseconfig)
+function M.run(baseconfig,callback)
   local config=baseconfig.LSP;
   if(not config.clients)then
     return
   end
   setup(baseconfig,config);
+  callback(0,"finished");
 end
 
 return M;

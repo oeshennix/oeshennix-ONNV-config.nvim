@@ -20,7 +20,8 @@ function M.install(setupConfig,callback)
       "nix","build","--print-out-paths","--no-link"
     },
     {
-      cwd=installation_path.."/other/nix-helper"
+      cwd=installation_path.."/other/nix-helper",
+      detach=true
     },vim.schedule_wrap(function(systemCompleted)
       local outputs=systemCompleted.stdout;
       outputs=string.match(outputs,"^(.-)\n");
@@ -46,7 +47,8 @@ function M.install(setupConfig,callback)
       "-o","neovimnixhelper"
     },
     {
-      cwd=setupConfig.installation_path.."/bin"
+      cwd=setupConfig.installation_path.."/bin",
+      detach=true
     },vim.schedule_wrap(function()
       neovimnixhelperpath=setupConfig.installation_path.."/bin/neovimnixhelper";
       callback(0,string.format("installed at %s",neovimnixhelperpath))
@@ -56,18 +58,39 @@ end
 
 function M.run(baseconfig,callback)
   local config=baseconfig.nix;
-  if(config.executables)then
-    for _,executable in ipairs(config.executables)do
-      callback(string.format("nix installing %s",executable));
-      vim.env.PATH=string.format("%s/bin:%s",nixgetpath(executable),vim.env.PATH);
+  local selfcr;
+  local function run()
+    if(config.executables)then
+      local totalexecutables = #config.executables;
+      for index,executable in ipairs(config.executables)do
+        callback(1,string.format("[%d/%d] nix installing %s",index,totalexecutables,executable));
+        vim.system({
+          neovimnixhelperpath,
+          "nix","build","--no-link","--print-out-paths",executable
+        },{
+          detach=true,
+        },vim.schedule_wrap(function(systemCompleted)
+          local outputs=systemCompleted.stdout;
+          outputs=string.match(outputs,"^(.-)\n");
+          vim.env.PATH=string.format("%s/bin:%s",outputs,vim.env.PATH);
+          callback(1,string.format("[%d/%d] nix done installing %s",index,totalexecutables,executable));
+          coroutine.resume(selfcr);
+        end));
+        coroutine.yield();
+      end
     end
-  end
-  if(config.setvariables)then
-    for c,v in pairs(config.setvariables)do
-      callback(string.format("nix installing %s",v));
-      baseconfig.variables[c]=nixgetpath(v);
+    --[[
+    if(config.setvariables)then
+      for c,v in pairs(config.setvariables)do
+        callback(string.format("nix installing %s",v));
+        baseconfig.variables[c]=nixgetpath(v);
+      end
     end
+    ]]
+    callback(0,"finished");
   end
+  selfcr=coroutine.create(run);
+  coroutine.resume(selfcr);
 end
 
 return M;
