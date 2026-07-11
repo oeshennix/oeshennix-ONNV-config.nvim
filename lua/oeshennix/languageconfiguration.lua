@@ -18,7 +18,7 @@ function languageconfiguration.setup.clangd(baseconfig,settings)
     local clangdcachedir=vim.fn.stdpath("cache").."/clangd";
     local compilecommandsfilename=clangdcachedir.."/compile_flags.txt";
 
-    if not (vim.uv or vim.loop).fs_stat(clangdcachedir) then
+    if not vim.uv.fs_stat(clangdcachedir) then
       local pathcreated=vim.uv.fs_mkdir(clangdcachedir,tonumber("770",8));
       if(not pathcreated)then
         error("failed to create cachedir for clangd");
@@ -26,7 +26,7 @@ function languageconfiguration.setup.clangd(baseconfig,settings)
     end
     local compilecommandsfile=io.open(compilecommandsfilename,"w");
     if(settings.clangflags)then
-      ONNVmorph.morph(settings.clangflags,baseconfig,{"var","concat"});
+      ONNVmorph.morph(settings.clangflags,baseconfig,{"var","env","concat"});
       for c,v in ipairs(settings.clangflags)do
         compilecommandsfile:write(string.format("%s\n",v));
       end
@@ -43,6 +43,22 @@ function languageconfiguration.setup.ts_ls(baseconfig,settings)
   }
 end
 function languageconfiguration.setup.lua_ls(baseconfig,settings)
+  if(settings.onnvconfiguration)then
+    if settings.onnvconfiguration == "vim" then
+      return {
+        settings = {
+          Lua = vim.tbl_deep_extend("force",{
+            runtime = { version = "LuaJIT" },
+            workspace = {
+              library = {
+                vim.env.VIMRUNTIME
+              }
+            }
+          },settings.settings or {})
+        }
+      }
+    end
+  end
   return settings
 end
 
