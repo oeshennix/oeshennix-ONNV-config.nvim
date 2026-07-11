@@ -1,4 +1,3 @@
-local log=require("nvimonnvconfig.log");
 local oeshennixconfig=require("oeshennixonnvconfig.config");
 local M={};
 
@@ -11,23 +10,31 @@ local function nixgetpath(package)
 end
 
 ---@param setupConfig ONNVConfigure.Config
-function M.install(setupConfig,callback)
-  log.warn("installing nix-helper");
+function M.install(setupConfig,safewrap,log)
+  log(1,"installing nix-helper");
   local installation_path=oeshennixconfig.installation_path;
-  log.warn(string.format("building helper-nix with \"%s\"",setupConfig.installation_type));
+  log(1,string.format("building helper-nix with \"%s\"",setupConfig.installation_type));
+  local systemobj;
+  local function cleanup()
+      if(systemobj:is_closing())then
+        return;
+      end
+      systemobj:kill('sigterm');
+  end
   if(setupConfig.installation_type=="nix-flake")then
-    vim.system({
+    systemobj=vim.system({
       "nix","build","--print-out-paths","--no-link"
     },
     {
       cwd=installation_path.."/other/nix-helper",
       detach=true
-    },vim.schedule_wrap(function(systemCompleted)
+    },safewrap(function(systemCompleted)
       local outputs=systemCompleted.stdout;
       outputs=string.match(outputs,"^(.-)\n");
       neovimnixhelperpath=outputs.."/bin/nix-helper";
-      callback(0,string.format("installed at %s",neovimnixhelperpath))
-    end))
+      log(0,string.format("installed at %s",neovimnixhelperpath))
+      return 0;
+    end,cleanup))
   elseif(setupConfig.installation_type=="build-with-nix")then
     vim.system({
       "nix","shell","nixpkgs#gcc","--command",
@@ -37,10 +44,10 @@ function M.install(setupConfig,callback)
     {
       cwd=setupConfig.installation_path.."/bin",
       detach=true
-    },vim.schedule_wrap(function()
+    },safewrap(function()
       neovimnixhelperpath=setupConfig.installation_path.."/bin/neovimnixhelper";
       callback(0,string.format("installed at %s",neovimnixhelperpath))
-    end))
+    end,cleanup))
   elseif(setupConfig.installation_type=="build-with-system")then
     vim.system({
       "gcc","-O2","-s",installation_path.."/other/nix-helper/neovimnixhelper.c",
@@ -52,7 +59,7 @@ function M.install(setupConfig,callback)
     },vim.schedule_wrap(function()
       neovimnixhelperpath=setupConfig.installation_path.."/bin/neovimnixhelper";
       callback(0,string.format("installed at %s",neovimnixhelperpath))
-    end));
+    end),cleanup);
   end
 end
 
