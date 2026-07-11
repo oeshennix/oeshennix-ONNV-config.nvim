@@ -11,7 +11,6 @@ function M.setup(configuration)
     Config(configuration);
   end
   assert(Config.installation_path,"oeshennixonnvconfig installation path not set");
-  nvimonnvconfig.installModules(Config.installmodules);
 end
 
 return M;
